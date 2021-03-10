@@ -1,6 +1,8 @@
 <?php
-$docroot = $docroot ?? $_SERVER['DOCUMENT_ROOT'] ?: '/usr/local/emhttp';
-require_once "$docroot/webGui/include/Helpers.php";
+require_once('system/common.php');
+$common = Common::getInstance();
+
+require_once($common->getDocRoot()."/webGui/include/Helpers.php");
 
 $var = parse_ini_file('state/var.ini');
 $error = '';

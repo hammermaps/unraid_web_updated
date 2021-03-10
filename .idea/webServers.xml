@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="WebServers">
+    <option name="servers">
+      <webServer id="c0261817-807a-4e30-ae9a-9c60d7d5e4c1" name="Unraid" url="http://192.168.178.13/">
+        <fileTransfer rootFolder="/usr/local/emhttp" host="192.168.178.13" port="21">
+          <advancedOptions>
+            <advancedOptions dataProtectionLevel="Private" passiveMode="true" shareSSLContext="true" />
+          </advancedOptions>
+        </fileTransfer>
+      </webServer>
+    </option>
+  </component>
+</project>
