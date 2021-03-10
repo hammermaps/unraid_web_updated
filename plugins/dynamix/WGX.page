@@ -1,0 +1,501 @@
+Menu="parentname:nnn"
+Title="Tunnel wgX"
+Tag="icon-vpn"
+---
+<?PHP
+/* Copyright 2005-2019, Lime Technology
+ * Copyright 2012-2019, Bergware International.
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License version 2,
+ * as published by the Free Software Foundation.
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ */
+?>
+<?
+$check_wgX = in_array('wgX',$active) ? 'true' : 'false';
+$start_wgX = in_array('wgX',$autostart);
+$peer_wgX  = $wgX = [];
+
+$netpool['wgX']  = long2ip(ip2long($netpool['wg0'])+XXX*256);
+$netpool6['wgX'] = str_replace(':0:0:',':XXX:0:',$netpool6['wg0']);
+$netport['wgX']  = $netport['wg0']+XXX;
+
+// read current configuration
+[$conf_wgX,$cfg_wgX,$this_wgX,$vpn_wgX] = readConf($peer_wgX,$wgX,'wgX');
+?>
+<script>
+netbase['wgX'] = <?=$netbase['wgX']?>;
+netpool['wgX'] = '<?=$netpool['wgX']?>';
+netport['wgX'] = '<?=$netport['wgX']?>';
+netbase6['wgX'] = '<?=$netbase6['wgX']?>';
+netpool6['wgX'] = '<?=$netpool6['wgX']?>';
+
+$(function(){
+  var ctrl = "<span class='status vhshift hshift'><i id='block-wgX' class='fa fa-fw fa-chevron-up' style='cursor:pointer' onclick='blockToggle(&quot;wgX&quot;)'></i></span>";
+  ctrl += "<span class='even wide'><span class='status vshift label'>Autostart</span><span class='status vhshift'><input type='checkbox' id='start-wgX' style='display:none'<?=$start_wgX?' checked':''?>></span></span>";
+  ctrl += "<span class='even'><span class='status vhshift'><input type='checkbox' id='view-wgX' style='display:none'></span></span>";
+  ctrl += "<span class='even'><span class='status vhshift'><input type='checkbox' id='toggle-wgX' style='display:none'></span></span>";
+  var form = $(document.wgX);
+  $('div#title').each(function(){if ($(this).html().indexOf('status vhshift')==-1) {$(this).find('span.left').append(ctrl);return false;}});
+  $('#start-wgX').switchButton({labels_placement:'left',off_label:'Off',on_label:'On'});
+  $('#start-wgX').change(function(){
+    var start = $('#start-wgX').is(':checked') ? 'on' : 'off';
+    $.post('/webGui/include/update.wireguard.php',{'#cmd':'autostart','#start':start,'#vtun':'wgX'});
+  });
+  $('#toggle-wgX').switchButton({labels_placement:'left',off_label:'Inactive',on_label:'Active',checked:<?=$check_wgX?>});
+  $('#toggle-wgX').change(function(e){
+<?if ($this_wgX):?>
+    e.preventDefault();
+    e.stopPropagation();
+    var wg = $('#toggle-wgX').is(':checked') ? 'start' : 'stop';
+    $.post('/webGui/include/update.wireguard.php',{'#cmd':'toggle','#wg':wg,'#vtun':'wgX'},function(ok){
+      if (wg=='start') {
+        if (ok) $.cookie('my-wgX','active',{expires:3650}); else $('#toggle-wgX').switchButton({checked:false});
+      } else {
+        if (ok) $.removeCookie('my-wgX'); else $('#toggle-wgX').switchButton({checked:true});
+      }
+<?if ($wgX['UPNP:0']===''):?>
+      $.post('/webGui/include/update.wireguard.php',{'#cmd':'upnpc','#xml':xml,'#vtun':'wgX','#link':'<?=$link?>','#ip':'<?=$server?>','#wg':$.cookie('my-wgX')},function(data){$('span.upnp.wgX').text(data);});
+<?endif;?>
+    });
+<?else:?>
+    $('#toggle-wgX').prop('checked',false).trigger('change');
+<?endif;?>
+  });
+  if ($.cookie('view-wgX')=='advanced') {
+    $('.advanced.wgX').show();
+    form.find('i.fa-chevron-down').removeClass('fa-chevron-down').addClass('fa-chevron-up');
+    form.find('input[class*="zone"]').show();
+    form.find('i[class*="zone"]').each(function(i){if (!form.find('input[name="PublicKey:'+i+'"]').val()) {
+      $('div.wgX.key'+i).show();
+      $(this).removeClass('key-off').addClass('key-off');
+    }});
+  }
+  $('#view-wgX').switchButton({labels_placement:'left',off_label:'Basic',on_label:'Advanced',checked:$.cookie('view-wgX')=='advanced'});
+  $('#view-wgX').change(function(){
+    if ($.cookie('view-wgX')==null) {
+      // advanced view
+      $.cookie('view-wgX','advanced',{expires:3650});
+      $('.advanced.wgX').show('slow');
+      form.find('input[class*="zone"]').show('slow');
+      form.find('i.fa-chevron-down').removeClass('fa-chevron-down').addClass('fa-chevron-up');
+      form.find('i[class*="zone"]').each(function(i){if (!form.find('input[name="PublicKey:'+i+'"]').val()) {
+        $('div.wgX.key'+i).show('slow');
+        $(this).removeClass('key-off').addClass('key-off');
+      }});
+    } else {
+      // basic view
+      $.removeCookie('view-wgX');
+      $('.advanced.wgX').hide('slow');
+      form.find('i.fa-chevron-up').removeClass('fa-chevron-up').addClass('fa-chevron-down');
+      form.find('i[class*="zone"]').each(function(i){if (form.find('input[name="PublicKey:'+i+'"]').val()) {
+        form.find('input[class$="zone'+i+'"]').hide('slow');
+        $('div.wgX.key'+i).hide('slow');
+        $(this).removeClass('key-off');
+      }});
+    }
+  });
+<?if ($this_wgX):?>
+  statistics(form,'wgX');
+<?endif;?>
+  showRemark(form);
+  setProtocol(form,'wgX');
+  form.find('input[name^="Address:"]').each(function(){
+    var i = $(this).attr('name').split(':')[1];
+    if (i>0) $(this).on('input change',function(){form.find('#ping-button1-'+i).prop('disabled',$(this).val()=='');});
+  });
+  form.find('input[name^="Address6:"]').each(function(){
+    var i = $(this).attr('name').split(':')[1];
+    if (i>0) $(this).on('input change',function(){form.find('.ping-button6-'+i).prop('disabled',$(this).val()=='');});
+  });
+  form.find('input[name^="gui:Endpoint:"]').each(function(){
+    var i = $(this).attr('name').split(':')[2];
+    $(this).on('input change',function(){
+      form.find('#ping-button2-'+i).prop('disabled',$(this).val()=='');
+    });
+  });
+  if (!$.cookie('block-wgX')) $('div#block-wgX').show(); else $('i#block-wgX').removeClass('fa-chevron-up').addClass('fa-chevron-down');
+  if (xml) {
+    $('div.upnp.wgX').show();
+<?if ($wgX['UPNP:0']===''):?>
+    $.post('/webGui/include/update.wireguard.php',{'#cmd':'upnpc','#xml':xml,'#vtun':'wgX','#link':'<?=$link?>','#ip':'<?=$server?>','#wg':$.cookie('my-wgX')},function(data){$('span.upnp.wgX').text(data);});
+<?endif;?>
+  } else {
+    form.find('select[name="UPNP:0"]').val('no');
+  }
+  var vpn = false, lan = false
+  form.find('select[name^="TYPE:"]').each(function(){
+    var i = $(this).attr('name').split(':')[1];
+    vpn |= $(this).val()=='7';
+    lan |= $(this).val()=='6' || $(this).val() % 2;
+    form.find('input[name="DNS:'+i+'"]').attr('placeholder',$(this).val()=='7' ? '(not used)' : '(optional)');
+    showAccess(form,i,$(this).val());
+  });
+  if (vpn) form.find('select[name="NAT:0"]').val('no').prop('disabled',true);
+  else if (form.find('select[name="NAT:0"]').val()=='no' && lan) $('span#my-static1-wgX').show();
+  else if (lan) $('span#my-static2-wgX').show();
+});
+</script>
+<div markdown="1" id="block-wgX" style="display:none">
+<form markdown="1" name="wgX" autocomplete="off" method="POST" action="/update.php" target="progressFrame" onsubmit="prepareSettings($(this),'wgX')">
+<input type="hidden" name="#include" value="/webGui/include/update.wireguard.php">
+<input type="hidden" name="#file" value="<?=$conf_wgX?>">
+<input type="hidden" name="#cfg" value="<?=$cfg_wgX?>">
+<input type="hidden" name="#cmd" value="update">
+<input type="hidden" name="#name" value="<?=$tower?>">
+<input type="hidden" name="#vtun" value="wgX">
+<input type="hidden" name="#wg" value="">
+<input type="hidden" name="#subnets1" value="<?=implode(', ',$hosts)?>, ">
+<input type="hidden" name="#subnets2" value="<?=implode(', ',$subnets)?>, ">
+<input type="hidden" name="#shared1" value="<?=implode(', ',$hosts)?>, ">
+<input type="hidden" name="#shared2" value="<?=implode(', ',$subnets)?>, ">
+<input type="hidden" name="#internet" value="<?=$public?>">
+Local name:
+: <span class="input"><input type="text" name="Name:0" class="wide" maxlength="99" value="<?=$wgX["Name:0"]?>" placeholder="(optional)"></span>
+  <span class="pin"><i class="fa fa-fw fa-eye eye0<?=$this_wgX?'':' key-off'?>" style="cursor:pointer" onclick="WGconfig(this,'wgX','')" title="View Local Config"></i>
+  <i class="fa fa-fw fa-key zone0<?=$wgX['PublicKey:0']?'':' key-off'?>" style="cursor:pointer" onclick="openClose($(document.wgX),null,'div.key0')" title="Toggle keys"></i>
+  <i class="fa fa-fw fa-chevron-down" style="cursor:pointer" onclick="openClose($(document.wgX),this,'div.zone0')" title="Toggle view"></i></span>
+
+> Use this field to set a name for this connection and make it easily recognizable. The same name will appear in the configuration of any peers.
+
+<div markdown="1" class="keys wgX key0"<?=$wgX['PublicKey:0']?' style="display:none">':'>'?>
+Local private key:
+: <span class="input"><input type="text" name="PrivateKey:0" class="wide private-0" maxlength="64" value="<?=$wgX['PrivateKey:0']?>" onchange="highlight($(document.wgX),this,0)" placeholder="(mandatory)" required></span>
+  <input type="button" class="form" value="Generate Keypair" onclick="keypair($(document.wgX),'0')">
+
+> Use the **Generate Keypair** button to automatically create a uniqe private and public key combination.<br>
+> Or paste in an existing private key, generated by WireGuard. Do **NOT** share this private key with others!
+
+Local public key:
+: <span class="input"><input type="text" name="PublicKey:0" class="wide public-0" maxlength="64" value="<?=$wgX['PublicKey:0']?>" onchange="highlight($(document.wgX),this,0)" placeholder="(mandatory)" required></span>
+
+> Use the **Generate Keypair** button to automatically create a uniqe private and public key combination.<br>
+> Or paste in an existing public key, generated by WireGuard. This key **IS** shared with peers wishing to connect.
+
+</div>
+<div markdown="1" class="advanced wgX zone0" style="display:none">
+Network protocol:
+: <span class="input"><select name="PROT:0" size="1" class="subnet" onchange="setProtocol($(document.wgX),'wgX',true)">
+  <?=mk_option($wgX['PROT:0'], "", "IPv4 only")?>
+  <?=mk_option($wgX['PROT:0'], "6", "IPv6 only")?>
+  <?=mk_option($wgX['PROT:0'], "46", "IPv4 + IPv6")?>
+  </select></span>
+
+<div markdown="1" class="ipv4 wgX" style="display:none">
+Local tunnel network pool:
+<input type="hidden" name="Network:0" value="">
+: <span class="input"><input type="text" name="gui:Network:0" class="subnet" maxlength="15" value="<?=explode('/',$wgX['Network:0'])[0]?>" onchange="setPool($(document.wgX),'wgX')" pattern="<?=$validIP4?>" title="IPv4 network" placeholder="<?=$netpool['wgX']?>">/
+ <input type="number" name="gui:Mask:0" class="mask" min="1" max="32" value="<?=explode('/',$wgX['Network:0'])[1]?>" onchange="setPool($(document.wgX),'wgX')" placeholder="24"></span>
+
+</div>
+<div markdown="1" class="ipv6 wgX" style="display:none">
+Local tunnel network pool IPv6:
+<input type="hidden" name="Network6:0" value="">
+: <span class="input"><input type="text" name="gui:Network6:0" class="subnet" maxlength="40" value="<?=explode('/',$wgX['Network6:0'])[0]?>" onchange="setPool6($(document.wgX),'wgX')" pattern="<?=$validIP6?>" title="IPv6 network" placeholder="<?=$netpool6['wgX']?>">/
+ <input type="number" name="gui:Mask6:0" class="mask" min="1" max="128" value="<?=explode('/',$wgX['Network6:0'])[1]?>" onchange="setPool6($(document.wgX),'wgX')" placeholder="64"></span>
+
+</div>
+> WireGuard tunnels need an internal IP address. Assign a network pool using the default IPv4 network <?=$netpool['wgX']?>/24 or
+> the default IPv6 network <?=$netpool6['wgX']?>/64 or assign your own network pool from which automatic assignment can be done for both this server and any peers.
+>
+> The *tunnel network pool* must be a unique network not already existing on the server or any of the peers.
+
+<div markdown="1" class="ipv4 wgX" style="display:none">
+Local tunnel address:
+: <span class="input"><input type="text" name="Address:0" class="subnet" maxlength="15" value="<?=$wgX['Address:0']?:long2ip($netbase['wgX']+1)?>" onchange="lockEye($(document.wgX),0)" pattern="<?=$validIP4?>" title="IPv4 address"></span>
+
+> This field is auto filled-in when a local tunnel network pool is created. It is allowed to overwrite the assignment, but this is normally not necessary. Use with care when changing manually.
+
+</div>
+<div markdown="1" class="ipv6 wgX" style="display:none">
+Local tunnel address IPv6:
+: <span class="input"><input type="text" name="Address6:0" class="subnet" maxlength="40" value="<?=$wgX['Address6:0']?:($netbase6['wgX'].'1')?>" onchange="lockEye($(document.wgX),0)" pattern="<?=$validIP6?>" title="IPv6 address"></span>
+
+> This field is auto filled-in when a local tunnel network pool is created. It is allowed to overwrite the assignment, but this is normally not necessary. Use with care when changing manually.
+
+</div>
+</div>
+Local endpoint:
+: <span class="input"><input type="text" name="Endpoint:0" class="subnet" value="<?=$vpn_wgX?'':$wgX['Endpoint:0']?>" onchange="lockEye($(document.wgX),0)" pattern="<?=$validText?>" title="IP address or FQDN" placeholder="<?=$vpn_wgX?'(not used)':preg_replace('/^(www\.).+(\.unraid.net)$/','$1<hash>$2',$public)?>">:
+  <input type="number" name="gui:ListenPort:0" class="port" min="1" max="65535" value="<?=$vpn_wgX?'':$wgX['ListenPort:0']?>" onchange="portRemark($(document.wgX),'wgX',this.value)"  placeholder="<?=$vpn_wgX?'':$netport['wgX']?>"></span>
+  <span class="remark" style="display:none">Remark: configure your router with port forwarding of port **<span id="my-port-wgX"><?=$wgX['ListenPort:0']?:$netport['wgX']?></span>/UDP** to **<?=$server?>**</span><span class="upnp wgX"></span>
+  <input type="hidden" name="ListenPort:0" value="">
+
+> This field is automatically filled in with the public management domain name *www.&lt;hash&gt;.unraid.net* or the public address of the server.<br>
+> This allows VPN tunnels to be established from external peers to the server.<br>
+> Configure the correct port forwarding on your router (default port is <?=$netport['wgX']?> but this may be changed) to allow any incoming connections to reach the server.
+>
+> Users with a registered domain name can use this field to specify how their server is known on the Internet. E.g. www.myserver.mydomain.<br>
+> Again make sure your router is properly set up.
+
+<div markdown="1" class="advanced wgX zone0" style="display:none">
+Local server uses NAT:
+: <span class="input"><select name="NAT:0" size="1" class="narrow" onchange="showRoute($(document.wgX),'wgX',0)">
+  <?=mk_option($wgX['NAT:0'], "", "Yes")?>
+  <?=mk_option($wgX['NAT:0'], "no", "No")?>
+  </select></span>
+  <span id="my-static1-wgX" style="display:none">Remark: configure your router with a static route of **<?=$wgX['Network:0']?>** to **<?=$server?>**</span><span id="my-static2-wgX" style="display:none">Remark: docker containers on custom networks need static routing **<?=$wgX['Network:0']?>** to **<?=$server?>**</span>
+
+> When NAT is enabled, the server uses its own LAN address when forwarding traffic from the tunnel to other devices in the LAN network.
+> Use this setting when no router modifications are desired, but this approach doesn't work with Docker containers using custom IP addressess.
+>
+> When NAT is disabled, the server uses the WireGuard tunnel address when forwarding traffic.
+> In this case it is required that the default gateway (router) has a static route configured to refer tunnel address back to the server.
+
+<div markdown="1" class="upnp wg0" style="display:none">
+Local gateway uses UPnP:
+: <span class="input"><select name="UPNP:0" size="1" class="narrow" onchange="showRemark($(document.wgX))">
+  <?=mk_option($wgX['UPNP:0'], "", "Yes")?>
+  <?=mk_option($wgX['UPNP:0'], "no", "No")?>
+  </select></span>
+
+> Defaults to YES if the local gateway has UPnP enabled and is responding to requests.<br>
+> When UPnP is enabled, it is not necessary to configure port forwarding on the router to allow incoming tunnel connections. This is done automatically.
+
+</div>
+Local tunnel firewall:
+: <span class="input"><input type="text" name="DROP:0" class="wide" value="<?=$wgX['DROP:0']?>" onchange="lockEye($(document.wgX),0)" pattern="<?=$validList?>" title="IPv4/IPv6 hosts and subnets" placeholder="(optional)"></span>
+  Rule: <select name="RULE:0" size="1" class="auto">
+  <?=mk_option($wgX['RULE:0'], "", "Deny")?>
+  <?=mk_option($wgX['RULE:0'], "1", "Allow")?>
+  </select>
+
+> The firewall function controls remote access over the WireGuard tunnel to specific hosts and/or subnets.<br>
+> The default rule is "deny" and blocks addresses specified in this field, while allowing all others.<br>
+> Changing the rule to "allow" inverts the selection, meaning only the specified addresses are allowed and all others are blocked.<br>
+> Use a comma as separator when more than one IP address is entered.
+
+MTU size:
+: <span class="input"><input type="number" name="MTU:0" class="trim" min="68" max="9198" value="<?=$wgX['MTU:0']?>" onchange="lockEye($(document.wgX),0)" placeholder="(automatic)">bytes</span>
+
+> Leave this to the default automatic mode to select the MTU size. This MTU size is common for all peer connections.
+
+<!--
+DNS servers:
+: <span class="input"><input type="text" name="DNS:0" class="wide" value="" placeholder="(optional)"></span>
+
+> Not used at the moment. It gives errors when used together with Unraid.
+-->
+</div>
+<input type="hidden" name="PostUp:0:0" value="<?=$postUp0?>">
+<input type="hidden" name="PostUp:0:1" value="<?=$postUp1?>">
+<input type="hidden" name="PostUp:0:2" value="">
+<input type="hidden" name="PostDown:0:0" value="<?=$postDown0?>">
+<input type="hidden" name="PostDown:0:1" value="<?=$postDown1?>">
+<input type="hidden" name="PostDown:0:2" value="">
+
+> The <i class='fa fa-fw fa-eye'></i> icon is used to view a peer's configuration. A configuration can be downloaded or read directly for instant set up of the peer.<br>
+> The icon is disabled when no peer configuration exists or the user has made changes to the existing settings which are not applied yet.
+>
+> The <i class='fa fa-fw fa-key'></i> icon is used to show or hide the private, public and preshared keys. Note that these fields are always shown when no keys are set.
+
+<div id="peers-list-wgX" style="display:none"></div>
+<?foreach ($peer_wgX as $i):?>
+<div markdown="1" id="index-wgX-<?=$i?>" class="shade-<?=$display['theme']?>">
+Peer name:
+: <span class="input"><input type="text" name="Name:<?=$i?>" class="wide" maxlength="99" value="<?=$wgX["Name:$i"]?>" onchange="lockEye($(document.wgX),<?=$i?>)" placeholder="(optional)"></span>
+  <input type="button" class="form advanced zone<?=$i?>" style="display:none" value="Delete Peer" onclick="delPeer($(document.wgX),'#index-wgX-<?=$i?>')">
+  <span class="pin"><i class="fa fa-fw fa-eye eye<?=$i?><?=(file_exists("$etc/peers/peer-$tower-wgX-$i.conf")&&(int)$wgX["TYPE:$i"]!=7)?'':' key-off'?>" style="cursor:pointer" onclick="WGconfig(this,'peer-<?=$tower?>-wgX-<?=$i?>','/peers')" title="View Peer Config"></i>
+  <i class="fa fa-fw fa-key zone<?=$i?><?=$wgX["PublicKey:$i"]?'':' key-off'?>" style="cursor:pointer" onclick="openClose($(document.wgX),null,'div.key<?=$i?>')" title="Toggle keys"></i>
+  <i id="chevron-wgX-<?=$i?>" class="fa fa-fw fa-chevron-down" style="cursor:pointer" onclick="openClose($(document.wgX),this,'div.zone<?=$i?>')" title="Toggle view"></i></span>
+
+> Use this field to set a name for this peer connection and make it easily recognizable. The same name will appear in the configuration of the peer at the opposite side.
+
+Peer type of access:
+: <span class="input"><select name="TYPE:<?=$i?>" size="1" class="auto" onchange="updatePeer($(document.wgX),<?=$i?>,this.value,'wgX')">
+  <?=mk_option($wgX["TYPE:$i"], "0", "Remote access to server")?>
+  <?=mk_option($wgX["TYPE:$i"], "1", "Remote access to LAN")?>
+  <?=mk_option($wgX["TYPE:$i"], "2", "Server to server access")?>
+  <?=mk_option($wgX["TYPE:$i"], "3", "LAN to LAN access")?>
+  <?=mk_option($wgX["TYPE:$i"], "4", "Server hub & spoke access")?>
+  <?=mk_option($wgX["TYPE:$i"], "5", "LAN hub & spoke access")?>
+  <?=mk_option($wgX["TYPE:$i"], "6", "Remote tunneled access")?>
+  <?=mk_option($wgX["TYPE:$i"], "7", "VPN tunneled access")?>
+  </select></span>
+  <span id="access-type-<?=$i?>" class="access-type"></span>
+
+<?if ($i==1):?>
+> ![](<?=autov('/webGui/images/wireguard-help.png')?>)
+<?endif;?>
+
+<div markdown="1" class="keys wgX key<?=$i?>"<?=$wgX["PublicKey:$i"]?' style="display:none">':'>'?>
+Peer private key:
+: <span class="input"><input type="text" name="PrivateKey:<?=$i?>" class="wide private-<?=$i?>" maxlength="64" value="<?=$wgX["PrivateKey:$i"]?>" onchange="highlight($(document.wgX),this,<?=$i?>)" placeholder="(optional)"></span>
+  <input type="button" class="form" value="Generate Keypair" onclick="keypair($(document.wgX),'<?=$i?>')">
+
+> Use the **Generate Keypair** button to automatically create a uniqe private and public key combination for the peer side.<br>
+> Or paste in an existing private key, generated by WireGuard. Do **NOT** share this private key with others!
+
+Peer public key:
+: <span class="input"><input type="text" name="PublicKey:<?=$i?>" class="wide public-<?=$i?>" maxlength="64" value="<?=$wgX["PublicKey:$i"]?>" onchange="highlight($(document.wgX),this,<?=$i?>)" placeholder="(mandatory)" required></span>
+
+> Use the **Generate Keypair** button to automatically create a uniqe private and public key combination for the peer side.<br>
+> Or paste in an existing public key, generated by WireGuard. This key **IS** used by the server to connect to the peer.
+
+Peer preshared key:
+: <span class="input"><input type="text" name="PresharedKey:<?=$i?>" class="wide preshared-<?=$i?>" maxlength="64" value="<?=$wgX["PresharedKey:$i"]?>" onchange="highlight($(document.wgX),this,<?=$i?>)" placeholder="(optional)"></span>
+  <input type="button" class="form" value="Generate Key" onclick="presharedkey($(document.wgX),'<?=$i?>')">
+
+> For added security a preshared key can be used. Use the **Generate Key** button to automatically create a unique preshared key.<br>
+> This key is the same at both server and peer side and is added to the peer configuration as well.
+
+</div>
+<div markdown="1" class="advanced wgX zone<?=$i?>" style="display:none">
+<div markdown="1" class="ipv4 wgX" style="display:none">
+Peer tunnel address:
+: <span class="input"><input type="text" name="Address:<?=$i?>" class="subnet" maxlength="15" value="<?=$wgX["Address:$i"]?>" onchange="setAllow($(document.wgX),this.value,<?=$i?>)" pattern="<?=$validIP4?>" title="IPv4 address"></span>
+  <input type="button" class="form ping-button1-<?=$i?>" value="Ping" onclick="ping($(document.wgX),this,'input[name=&quot;Address:<?=$i?>&quot;]')"<?=$wgX["Address:$i"]?'':' disabled'?>>
+
+</div>
+<div markdown="1" class="ipv6 wgX" style="display:none">
+Peer tunnel address IPv6:
+: <span class="input"><input type="text" name="Address6:<?=$i?>" class="subnet" maxlength="40" value="<?=$wgX["Address6:$i"]?>" onchange="setAllow6($(document.wgX),this.value,<?=$i?>)" pattern="<?=$validIP6?>" title="IPv6 address"></span>
+  <input type="button" class="form ping-button6-<?=$i?>" value="Ping" onclick="ping($(document.wgX),this,'input[name=&quot;Address6:<?=$i?>&quot;]')"<?=$wgX["Address6:$i"]?'':' disabled'?>>
+
+</div>
+> This field is auto filled-in when a local tunnel network pool is created. It is allowed to overwrite the assignment, but this is normally not necessary. Use with care when changing manually.<br>
+> Each peer must have a unique tunnel IP address.
+
+Peer endpoint:
+<input type="hidden" name="Endpoint:<?=$i?>" value="">
+: <span class="input"><input type="text" name="gui:Endpoint:<?=$i?>" class="subnet" value="<?=$wgX["Endpoint:$i"]?>" pattern="<?=$validText?>" title="IP address or FQDN" onchange="lockEye($(document.wgX),<?=$i?>)" <?=($vpn_wgX||(int)$wgX["TYPE:$i"]==2||(int)$wgX["TYPE:$i"]==3)?'placeholder="(mandatory)" required':'placeholder="(not used)"'?>>:
+  <input type="number" name="gui:ListenPort:<?=$i?>" class="port" min="1" max="65535" value="<?=$wgX["ListenPort:$i"]?>" onchange="lockEye($(document.wgX),<?=$i?>)"<?=$wgX["Endpoint:$i"]?" placeholder=\"".($wgX['ListenPort:0']?:$netport['wgX'])."\"":""?>></span>
+  <input type="button" class="form ping-button2-<?=$i?>" value="Ping" onclick="ping($(document.wgX),this,'input[name=&quot;gui:Endpoint:<?=$i?>&quot;]')"<?=$wgX["Endpoint:$i"]?'':' disabled'?>>
+
+> When this field is left empty, the server operates in *passive mode* to establish the tunnel. It must be the peer which starts the tunnel.
+>
+> When an IP address is entered to connect to the peer, the server operates in *active mode* and establishes the tunnel to the peer as soon as there is data to send.
+>
+> *Note: this field is mandatory for "server-to-server" and "LAN-to-LAN" connections*
+
+Peer allowed IPs:
+: <span class="input"><input type="text" name="AllowedIPs:<?=$i?>" class="wide" value="<?=$wgX["AllowedIPs:$i"]?>" onchange="lockEye($(document.wgX),<?=$i?>)" pattern="<?=$validList?>" title="IPv4 and IPv6 addresses" placeholder="(mandatory)" required></span>
+
+> This field is automatically filled in with the tunnel address of the peer. This allows the server to reach the peer over the tunnel.<br>
+> When the peer is another server or router with additional networks, then their subnets can be added here to make these networks reachable over the tunnel.
+
+Peer DNS server:
+: <span class="input"><input type="text" name="DNS:<?=$i?>" class="subnet" maxlength="40" value="<?=$wgX["DNS:$i"]?>" title="Peer DNS server address" placeholder="(optional)"></span>
+
+> Use this entry to overwrite the current DNS server assignment of the Peer
+
+Persistent keepalive:
+: <span class="input"><input type="number" name="PersistentKeepalive:<?=$i?>" class="trim" min="0" max="600" value="<?=$wgX["PersistentKeepalive:$i"]?>" onchange="lockEye($(document.wgX),<?=$i?>)" placeholder="(disabled)">seconds</span>
+
+> By default a WireGuard tunnel stays silent when no traffic is present, which may cause the connection to drop.
+> Normally this isn't a problem since a WireGuard tunnel is automatically re-established when it is needed.<br>
+> A keepalive timer will hold the connection open, for most situations a timer value of 20 seconds is suitable.
+>
+> Note that for mobile devices this will use more data and drain your battery faster.
+
+</div>
+<span class="pin next">Data sent: <span class="tx-<?=$i?>">0 B</span>Data received: <span class="rx-<?=$i?>">0 B</span></span>
+<span class="pin">Last handshake: <span class="hs-<?=$i?>">unknown</span></span>
+</div>
+<?endforeach;?>
+
+&nbsp;
+: <input type="submit" value="Apply" disabled><input type="button" value="Done" onclick="done()"><input type="button" value="Add Peer" onclick="addPeer($(document.wgX),'wgX')"><input type="button" class="advanced wgX" value="Delete Tunnel" style="float:right;display:none" onclick="delTunnel('wgX')">
+</form>
+
+<script markdown="1" type="text/html" id="peer-template-wgX">
+<div markdown="1" id="index-wgX-INDEX" class="shade-<?=$display['theme']?>">
+Peer name:
+: <span class="input"><input type="text" name="Name:INDEX" class="wide" maxlength="99" value="" onchange="lockEye($(document.wgX),INDEX)" placeholder="(optional)"></span>
+  <input type="button" class="form advanced zoneINDEX" style="display:none" value="Delete Peer" onclick="delPeer($(document.wgX),'#index-wgX-INDEX')">
+  <span class="pin"><i class="fa fa-fw fa-eye eyeINDEX key-off" title="Show Peer Config"></i>
+  <i class="fa fa-fw fa-key zoneINDEX key-off" title="Toggle keys"></i>
+  <i id="chevron-wgX-INDEX" class="fa fa-fw fa-chevron-down" style="cursor:pointer" onclick="openClose($(document.wgX),this,'div.zoneINDEX')" title="Toggle view"></i></span>
+
+> Use this field to set a name for this peer connection and make it easily recognizable. The same name will appear in the configuration of the peer at the opposite side.
+
+Peer type of access:
+: <span class="input"><select name="TYPE:INDEX" size="1" class="auto" onchange="updatePeer($(document.wgX),INDEX,this.value,'wgX')">
+  <?=mk_option(0, "0", "Remote access to server")?>
+  <?=mk_option(0, "1", "Remote access to LAN")?>
+  <?=mk_option(0, "2", "Server to server access")?>
+  <?=mk_option(0, "3", "LAN to LAN access")?>
+  <?=mk_option(0, "4", "Server hub & spoke access")?>
+  <?=mk_option(0, "5", "LAN hub & spoke access")?>
+  <?=mk_option(0, "6", "Remote tunneled access")?>
+  <?=mk_option(0, "7", "VPN tunneled access")?>
+  </select></span>
+  <span id="access-type-INDEX" class="access-type"></span>
+
+> ![](<?=autov('/webGui/images/wireguard-help.png')?>)
+
+<div markdown="1" class="keys wgX keyINDEX">
+Peer private key:
+: <span class="input"><input type="text" name="PrivateKey:INDEX" class="wide private-INDEX" maxlength="64" value="" onchange="highlight($(document.wgX),this,0)" placeholder="(optional)"></span>
+  <input type="button" class="form" value="Generate Keypair" onclick="keypair($(document.wgX),'INDEX')">
+
+> Use the **Generate Keypair** button to automatically create a uniqe private and public key combination for the peer side.<br>
+> Or paste in an existing private key, generated by WireGuard. Do **NOT** share this private key with others!
+
+Peer public key:
+: <span class="input"><input type="text" name="PublicKey:INDEX" class="wide public-INDEX" maxlength="64" onchange="highlight($(document.wgX),this,0)" placeholder="(mandatory)" value="" required></span>
+
+> Use the **Generate Keypair** button to automatically create a uniqe private and public key combination for the peer side.<br>
+> Or paste in an existing public key, generated by WireGuard. This key **IS** used by the server to connect to the peer.
+
+Peer preshared key:
+: <span class="input"><input type="text" name="PresharedKey:INDEX" class="wide preshared-INDEX" maxlength="64" value="" onchange="highlight($(document.wgX),this,0)" placeholder="(optional)"></span>
+  <input type="button" class="form" value="Generate Key" onclick="presharedkey($(document.wgX),'INDEX')">
+
+> For added security a preshared key can be used. Use the **Generate Key** button to automatically create a unique preshared key.<br>
+> This key is the same at both server and peer side and is added to the peer configuration as well.
+
+</div>
+<div markdown="1" class="advanced wgX zoneINDEX" style="display:none">
+<div markdown="1" class="ipv4 wgX" style="display:none">
+Peer tunnel address:
+: <span class="input"><input type="text" name="Address:INDEX" class="subnet" maxlength="15" value="" onchange="setAllow($(document.wgX),this.value,INDEX)" pattern="<?=$validIP4?>" title="IPv4 address"></span>
+  <input type="button" class="form ping-button1-INDEX" value="Ping" onclick="ping($(document.wgX),this,'input[name=&quot;Address:INDEX&quot;]')" disabled>
+
+</div>
+<div markdown="1" class="ipv6 wgX" style="display:none">
+Peer tunnel address IPv6:
+: <span class="input"><input type="text" name="Address6:INDEX" class="subnet" maxlength="40" value="" onchange="setAllow6($(document.wgX),this.value,INDEX)" pattern="<?=$validIP6?>" title="IPv6 address"></span>
+  <input type="button" class="form ping-button6-INDEX" value="Ping" onclick="ping($(document.wgX),this,'input[name=&quot;Address6:INDEX&quot;]')" disabled>
+
+</div>
+> This field is auto filled-in when a local tunnel network pool is created. It is allowed to overwrite the assignment, but this is normally not necessary. Use with care when changing manually.<br>
+> Each peer must have a unique tunnel IP address.
+
+Peer endpoint:
+<input type="hidden" name="Endpoint:INDEX" value="">
+: <span class="input"><input type="text" name="gui:Endpoint:INDEX" class="subnet" value="" pattern="<?=$validText?>" title="IP address or FQDN" onchange="lockEye($(document.wgX),INDEX)" placeholder="(not used)">:
+  <input type="number" name="gui:ListenPort:INDEX" class="port" min="1" max="65535" value="" onchange="lockEye($(document.wgX),INDEX)"></span>
+  <input type="button" class="form ping-button2-INDEX" value="Ping" onclick="ping($(document.wgX),this,'input[name=&quot;gui:Endpoint:INDEX&quot;]')" disabled>
+
+> When this field is left empty, the server operates in *passive mode* to establish the tunnel. It must be the peer which starts the tunnel.
+>
+> When an IP address is entered to connect to the peer, the server operates in *active mode* and establishes the tunnel to the peer as soon as there is data to send.
+
+Peer allowed IPs:
+: <span class="input"><input type="text" name="AllowedIPs:INDEX" class="wide" value="" onchange="lockEye($(document.wgX),INDEX)" pattern="<?=$validList?>" title="IPv4 and IPv6 addresses" placeholder="(mandatory)" required></span>
+
+> This field is automatically filled in with the tunnel address of the peer. This allows the server to reach the peer over the tunnel.<br>
+> When the peer is another server or router with additional networks, then their subnets can be added here to make these networks reachable over the tunnel.
+
+Peer DNS server:
+: <span class="input"><input type="text" name="DNS:INDEX" class="subnet" maxlength="40" value="" title="Peer DNS server address" placeholder="(optional)"></span>
+
+> Use this entry to overwrite the current DNS server assignment of the Peer
+
+Persistent keepalive:
+: <span class="input"><input type="number" name="PersistentKeepalive:INDEX" class="trim" min="0" max="600" value="" onchange="lockEye($(document.wgX),INDEX)" placeholder="(disabled)">seconds</span>
+
+> By default a WireGuard tunnel stays silent when no traffic is present, which may cause the connection to drop.
+> Normally this isn't a problem since a WireGuard tunnel is automatically re-established when it is needed.<br>
+> A keepalive timer will hold the connection open, for most situations a timer value of 20 seconds is suitable.
+>
+> Note that for mobile devices this will use more data and drain your battery faster.
+
+</div>
+</div>
+</script>
+</div>

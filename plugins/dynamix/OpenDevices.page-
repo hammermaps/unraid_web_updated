@@ -1,0 +1,48 @@
+Menu="Main:4"
+Title="Unassigned Devices"
+Tag="unlink"
+Cond="(count($devs)>0)"
+---
+<?PHP
+/* Copyright 2005-2020, Lime Technology
+ * Copyright 2012-2020, Bergware International.
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License version 2,
+ * as published by the Free Software Foundation.
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ */
+?>
+<?
+$tabX = '#tab'.($var['fsState']=='Stopped'||is_dir('/mnt/cache') ? '4' : '3');
+?>
+<script>
+function open_status() {
+  $.post('/webGui/include/DeviceList.php',{path:'<?=addslashes(htmlspecialchars($path))?>',device:'open'},function(data) {
+    if (data) {$('#open_devices').html(data); display_diskio();}
+<?if ($var['fsState']=='Started'):?>
+    timers.open_status = setTimeout(open_status,3000);
+<?endif;?>
+  });
+}
+<?if ($var['fsState']=='Started'):?>
+$('<?=$tabX?>').bind({click:function() {$('i.toggle').show('slow');}});
+<?endif;?>
+
+open_status();
+</script>
+
+<table class="disk_status wide">
+<thead><tr><td>_(Device)_</td><td>_(Identification)_</td><td>_(Temp)_.</td><td>_(Reads)_</td><td>_(Writes)_</td><td>_(Errors)_</td><td>_(FS)_</td><td>_(Size)_</td><td>_(Used)_</td><td>_(Free)_</td><td>_(View)_</td></tr></thead>
+<tbody id="open_devices">
+<?
+foreach ($devs as $dev):
+  echo "<tr><td colspan='11'>&nbsp;</td></tr>";
+endforeach;
+?>
+</tbody>
+</table>
+
+:open_devices_help:

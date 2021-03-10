@@ -1,7 +1,6 @@
 <?PHP
 /* Copyright 2005-2020, Lime Technology
  * Copyright 2012-2020, Bergware International.
- * Amendments Copyright 2019-2021, Dave Walker (itimpi)
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License version 2,
@@ -9,27 +8,13 @@
  *
  * The above copyright notice and this permission notice shall be included in
  * all copies or substantial portions of the Software.
- *
- * This version patched by Dave Walker (itimpi) to add Elapsed Time and Increments columns to displayed information
- * (also modified with legacy support to work on Unraid versions prior to 6.9)
  */
 ?>
 <?
-
-// multi language support
-
-$plugin = 'parity.check.tuning';
-$docroot = $docroot ?: $_SERVER['DOCUMENT_ROOT'] ?: '/usr/local/emhttp';
-$translations = file_exists("$docroot/webGui/include/Translations.php");
-if ($translations) {
-  // $_SERVER['REQUEST_URI'] = 'main';
-  $_SERVER['REQUEST_URI'] = 'paritychecktuning';
-  require_once "$docroot/webGui/include/Translations.php";
-} else {
-  // legacy support (without javascript)
-  $noscript = true;
-  require_once "$docroot/plugins/$plugin/Legacy.php";
-}
+$docroot = $docroot ?? $_SERVER['DOCUMENT_ROOT'] ?: '/usr/local/emhttp';
+// add translations
+$_SERVER['REQUEST_URI'] = 'main';
+require_once "$docroot/webGui/include/Translations.php";
 
 require_once "$docroot/webGui/include/Helpers.php";
 extract(parse_plugin_cfg('dynamix',true));
@@ -63,42 +48,16 @@ function his_duration($time) {
 <link type="text/css" rel="stylesheet" href="<?autov("/webGui/styles/default-popup.css")?>">
 </head>
 <body>
+<table class='share_status'><thead><tr><td><?=_('Date')?></td><td><?=_('Duration')?></td><td><?=_('Speed')?></td><td><?=_('Status')?></td><td><?=_('Errors')?></td></tr></thead><tbody>
 <?
-/*
- * Determine if any entries are in the parity.tuning.check plugin extended format.
- */
-$log = '/boot/config/parity-checks.log'; $list = []; $extended = false;
-$lines = @file($log);
-if ($lines != false) {
-  foreach ($lines as $line) {
-    list($date,$duration,$speed,$status,$error,$elapsed,$increments) = explode('|',$line);
-    if (($elapsed != 0) || ($increments != 0)) {
-      $extended = true;
-      break;
-    }
-  }
-}
-?>
-<table class='share_status'><thead><tr><td><?=_('Date')?></td><td><?=_('Duration')?></td><td><?=_('Speed')?></td><td><?=_('Status')?></td><td><?=_('Errors')?></td>
-            <?=$extended?'<td>' . _('Elapsed Time') . ' </td><td>' . _('Increments') . '</td><td>Type</td>':''?>
-			</tr></thead><tbody>
-<?
-$log = '/boot/config/parity-checks.log'; $list = []; $extended = false;
+$log = '/boot/config/parity-checks.log'; $list = [];
 if (file_exists($log)) {
   $handle = fopen($log, 'r');
   while (($line = fgets($handle)) !== false) {
-    [$date,$duration,$speed,$status,$error,$elapsed,$increments,$type] = explode('|',$line);
-    if (($elapsed != 0) || ($increments != 0)) $extended = true;
+    [$date,$duration,$speed,$status,$error] = explode('|',$line);
     if ($speed==0) $speed = _('Unavailable');
     $date = str_replace(' ',', ',strtr(str_replace('  ',' 0',$date),$month));
-    if ($duration>0||$status<>0) {
-    	$list[] = "<tr><td>$date</td><td>".his_duration($duration)."</td><td>$speed</td><td>"
-    			.($status==0?_('OK'):($status==-4?_('Canceled'):($status==-5?_('Aborted'):'&nbsp;' . $status)))."</td><td>$error</td>"
-                .($extended?('<td>'.($elapsed==0?'Unknown':his_duration($elapsed)).'</td>'
-                            .'<td>'.($increments==0?_('Unavailable'):$increments).'</td>'):'')
-                . "<td>$type</td>"
-    			."</tr>";
-    }
+    if ($duration>0||$status<>0) $list[] = "<tr><td>$date</td><td>".his_duration($duration)."</td><td>$speed</td><td>".($status==0?_('OK'):($status==-4?_('Canceled'):$status))."</td><td>$error</td></tr>";
   }
   fclose($handle);
 }
