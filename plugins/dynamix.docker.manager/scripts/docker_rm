@@ -1,0 +1,13 @@
+#!/bin/bash
+
+# delete the docker image file or folder
+if [[ -f /boot/config/docker.cfg ]]; then
+  . /boot/config/docker.cfg
+  if  [[ -f $DOCKER_IMAGE_FILE ]]; then
+    echo "Deleting $DOCKER_IMAGE_FILE ..."
+    rm -f "$DOCKER_IMAGE_FILE"
+  elif [[ -d $DOCKER_IMAGE_FILE ]]; then
+    echo "Deleting $DOCKER_IMAGE_FILE ..."
+    rm -rf "$DOCKER_IMAGE_FILE"
+  fi
+fi

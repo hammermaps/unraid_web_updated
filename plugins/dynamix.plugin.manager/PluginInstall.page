@@ -1,0 +1,34 @@
+Menu="Plugins"
+Title="Install Plugin"
+Tag="download"
+---
+<?PHP
+/* Copyright 2005-2020, Lime Technology
+ * Copyright 2012-2020, Bergware International.
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License version 2,
+ * as published by the Free Software Foundation.
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ */
+?>
+<script>
+function installPlugin(name) {
+  var file = name.trim();
+  var plugin = file.replace(/^.*(\\|\/|\:)/,'').replace('.plg','')+':install';
+  if (file) openBox("/plugins/dynamix.plugin.manager/scripts/plugin&arg1=install&arg2="+file,"_(Install Plugin)_",600,900,true,'loadlist',plugin);
+}
+</script>
+**_(Enter URL of remote plugin file or local plugin file)_**
+
+<form name="plugin_install" method="POST" target="progressFrame">
+<input type="text" name="file" id="plugin_file" maxlength="1024" value="" style="width:33%">
+<input type="button" value="_(Install)_" onclick="installPlugin(this.form.file.value)">
+</form>
+
+:plugin_install_help:
+
+**_(Select local plugin file)_**
+<div id="plugin_tree" class="textarea"></div>

@@ -1,0 +1,236 @@
+Menu="OtherSettings"
+Type="xmenu"
+Title="Management Access"
+Icon="icon-key"
+Tag="expeditedssl"
+---
+<?PHP
+/* Copyright 2005-2020, Lime Technology
+ * Copyright 2012-2020, Bergware International.
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License version 2,
+ * as published by the Free Software Foundation.
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ */
+?>
+<?
+function find_tasks() {
+  global $site;
+  $tasks = [];
+  foreach ($site as $page) {
+    if (empty($page['Menu'])) continue;
+    $menu = strtok($page['Menu'], ' ');
+    switch ($menu[0]) {
+      case '$': $menu = get_ini_key($menu,strtok(' ')); break;
+      case '/': $menu = get_file_key($menu,strtok(' ')); break;
+    }
+    while ($menu !== false) {
+      if (substr($menu,0,5) == 'Tasks') {
+        if (empty($page['Cond'])) $tasks[] = $page['name'];
+        break;
+      }
+      $menu = strtok(' ');
+    }
+  }
+  sort($tasks);
+  return $tasks;
+}
+$keyfile = @file_get_contents($var['regFILE']);
+$isLEcert = file_exists("/boot/config/ssl/certs/certificate_bundle.pem");
+if ($keyfile !== false) $keyfile = base64_encode($keyfile);
+if ($isLEcert) exec("/usr/bin/openssl x509 -checkend 2592000 -noout -in /etc/ssl/certs/unraid_bundle.pem",$arrout,$retval_expired);
+$provisionlabel = $isLEcert ? _('Renew') : _('Provision');
+$disabled_provision = $keyfile===false || ($isLEcert && $retval_expired===0) || $var['USE_SSL']!="auto" ? 'disabled' : '';
+$disabled_updatedns = $keyfile!==false && $isLEcert ? '' : 'disabled';
+$internalip = $eth0['IPADDR:0'];
+$tasks = find_tasks();
+?>
+<script>
+function provisionSSL(button) {
+  var oldlabel = $.trim($(button).text());
+  $(button).prop("disabled", true).html("<i class='fa fa-circle-o-notch fa-spin fa-fw'></i>"+oldlabel);
+  var msg = "_(Your Let's Encrypt SSL Certificate has been provisioned and a DNS record for local IP address)_ <?=$internalip?> _(has been created on unraid.net)_.";
+  var failure = function(data) {
+    var status = data.status;
+    var obj = data.responseJSON;
+    var msg = "_(Sorry, an error occurred in processing your SSL certificate)_. _(The error is)_: "+obj.error+".";
+    $(button).prop("disabled", false).html(oldlabel);
+    swal({title:"_(Oops)_",text:msg,type:"error",html:true,confirmButtonText:"_(Ok)_"});
+  };
+  var success_provision = function(data) {
+    if (data.bundle) {
+      if (oldlabel == 'Renew') {
+        msg = "_(Your Let's Encrypt SSL Certificate has been renewed)_.";
+        success_rebind_check(data);
+      } else {
+        $.get("//"+data.internal_dns+":<?=$var['PORT']?>/dnscheck",function() {
+          success_rebind_check(data);
+        }).fail(function(){
+          failure({"status":403, "responseJSON":{"error":"_(Your router or DNS server has DNS rebinding protection enabled, preventing)_ "+data.internal_dns+" <?=$internalip?> _(resolution)_. _(See Help for more details and workarounds)_"}});
+        });
+      }
+    } else {
+      failure({"status":403, "responseJSON":{"error":"_(Server was unable to provision SSL certificate)_"}});
+    }
+  };
+  var success_rebind_check = function(data) {
+    $.post("/webGui/include/CertUpload.php",{text:data.bundle,csrf_token:"<?=$var['csrf_token']?>"},function(data2) {
+      swal({title:"",text:msg,type:"success",allowEscapeKey:false,confirmButtonText:"_(Ok)_",html:true},function(){button.form.submit();});
+    }).fail(failure);
+  };
+  $.post("/webGui/include/ProvisionCert.php",success_provision).fail(failure);
+}
+function updateDNS(button) {
+  $(button).prop("disabled", true).html("<i class='fa fa-circle-o-notch fa-spin fa-fw'></i>_(Update DNS)_");
+  var failure = function(data) {
+    var status = data.status;
+    var obj = data.responseJSON;
+    var msg = "_(Sorry, an error occurred updating unraid.net DNS records)_. _(The error is)_: "+obj.error+".";
+    $(button).prop("disabled", false).html("_(Update DNS)_");
+    swal({title:"_(Oops)_",text:msg,type:"error",html:true,confirmButtonText:"_(Ok)_"});
+  };
+  var success = function(data) {
+    $(button).prop("disabled", false).html("_(Update DNS)_");
+    swal({title:"",text:"_(Your local IP address)_ <?=$internalip?> _(has been updated for unraid.net)_.",type:"success",html:true,confirmButtonText:"_(Ok)_"});
+  };
+  $.post("/webGui/include/UpdateDNS.php",success).fail(failure);
+}
+function checkPorts(form) {
+  var check = [{'key':'PORTTELNET','port':'23','text':'TELNET'},{'key':'PORTSSH','port':'22','text':'SSH'},{'key':'PORT','port':'80','text':'HTTP'},{'key':'PORTSSL','port':'443','text':'HTTPS'}];
+  var list = [];
+  for (var i=0; i < check.length; i++) {
+    var key = check[i]['key'];
+    var port = check[i]['port'];
+    var text = check[i]['text'];
+    var item = $(form).find('input[name="'+key+'"]');
+    if (!item.val()) item.val(port);
+    if (item.val() < 1024 && item.val() != port && item.prop('disabled')==false) list.push(text+' ('+item.val()+')');
+    item.prop('disabled',false);
+  }
+  if (list.length > 0) {
+    swal({title:"_(Non-recommended port)_"+(list.length>1?'s':''),text:list.join(', ')+'<br>_(may conflict with well-known services)_',html:true,type:'warning',showCancelButton:true,confirmButtonText:"_(Proceed)_",cancelButtonText:"_(Cancel)_"},function(){form.submit();});
+  } else {
+    form.submit();
+  }
+}
+function updateTELNET(form) {
+  form.PORTTELNET.disabled = form.USE_TELNET.value=="_(no)_";
+}
+function updateSSH(form) {
+  form.PORTSSH.disabled = form.USE_SSH.value=="_(no)_";
+}
+function updateSSL(form) {
+  form.PORTSSL.disabled = form.USE_SSL.value=="_(no)_";
+}
+$(function(){
+  var form = document.SSLSettings;
+  updateTELNET(form);
+  updateSSH(form);
+  updateSSL(form);
+});
+</script>
+<form markdown="1" name="SSLSettings" method="POST" action="/update.htm" target="progressFrame">
+<input type="hidden" name="changePorts" value="apply">
+_(Start page)_:
+: <select name="START_PAGE">
+<?foreach ($tasks as $task) echo mk_option($var['START_PAGE']??'Main', $task, _($task));?>
+  </select>
+
+:mgmt_start_page_help:
+
+<!--
+Restrict access:
+: <select name="BIND_MGT" class="narrow">
+  <?=mk_option($var['BIND_MGT'], "no", _('No'))?>
+  <?=mk_option($var['BIND_MGT'], "yes", _('Yes'))?>
+  </select>
+
+> By default GUI, SSH and TELNET access are available on all active interfaces of the system.
+>
+> *Restrict access* limits GUI, SSH and TELNET access to the management interface only (eth0).
+-->
+
+_(Use TELNET)_:
+: <select name="USE_TELNET" onchange="updateTELNET(this.form)">
+  <?=mk_option($var['USE_TELNET'], "no", _('No'))?>
+  <?=mk_option($var['USE_TELNET'], "yes", _('Yes'))?>
+  </select>
+
+:mgmt_use_telnet_help:
+
+_(TELNET port)_:
+: <input type="number" name="PORTTELNET" class="narrow" min="1" max="65535" value="<?=htmlspecialchars($var['PORTTELNET']??23)?>">
+
+:mgmt_telnet_port_help:
+
+_(Use SSH)_:
+: <select name="USE_SSH" onchange="updateSSH(this.form)">
+  <?=mk_option($var['USE_SSH'], "no", _('No'))?>
+  <?=mk_option($var['USE_SSH'], "yes", _('Yes'))?>
+  </select>
+
+:mgmt_use_ssh_help:
+
+_(SSH port)_:
+: <input type="number" name="PORTSSH" class="narrow" min="1" max="65535" value="<?=htmlspecialchars($var['PORTSSH']??22)?>">
+
+:mgmt_ssh_port_help:
+
+_(Use UPnP)_:
+: <select name="USE_UPNP">
+  <?=mk_option($var['USE_UPNP'], "yes", _('Yes'))?>
+  <?=mk_option($var['USE_UPNP'], "no", _('No'))?>
+  </select>
+
+:mgmt_use_upnp_help:
+
+_(Use SSL/TLS)_:
+: <select name="USE_SSL" onchange="updateSSL(this.form)">
+  <?=mk_option($var['USE_SSL'], "auto", _('Auto'))?>
+  <?=mk_option($var['USE_SSL'], "no", _('No'))?>
+  <?=mk_option($var['USE_SSL'], "yes", _('Yes'))?>
+  </select>
+
+:mgmt_use_ssl_tls_help:
+
+_(HTTP port)_:
+: <input type="number" name="PORT" class="narrow" min="1" max="65535" value="<?=htmlspecialchars($var['PORT']??80)?>">
+
+:mgmt_http_port_help:
+
+_(HTTPS port)_:
+: <input type="number" name="PORTSSL" class="narrow" min="1" max="65535" value="<?=htmlspecialchars($var['PORTSSL']??443)?>">
+
+:mgmt_https_port_help:
+
+_(Local TLD)_:
+: <input type="text" name="LOCAL_TLD" class="narrow" value="<?=htmlspecialchars($var['LOCAL_TLD'])?>">
+
+:mgmt_local_tld_help:
+
+&nbsp;
+: <input type="button" value="_(Apply)_" onclick="checkPorts(this.form)" disabled><input type="button" value="_(Done)_" onclick="done()">
+
+</form>
+<div style="height:24px"></div>
+<form markdown="1" name="Provision" method="POST" action="/update.htm" target="progressFrame">
+<input type="hidden" name="changePorts" value="apply">
+_(Certificate issuer)_:
+: <?=shell_exec("/usr/bin/openssl x509 -text -noout -in /etc/ssl/certs/unraid_bundle.pem|sed -n -e 's/^.*Issuer: //p'")?>
+
+<?
+$time = strtotime(exec("/usr/bin/openssl x509 -text -noout -in /etc/ssl/certs/unraid_bundle.pem|sed -n -e 's/^.*Not After : //p'"));
+$format = $display['date'].($display['date']!='%c' ? ', '.str_replace(['%M','%R'],['%M:%S','%R:%S'],$display['time']):'');
+?>
+_(Certificate expiration)_:
+: <?=_(strftime($format, $time),0)?>
+
+&nbsp;
+: <button type="button" onclick="provisionSSL(this)" <?=$disabled_provision?>><?=$provisionlabel?></button><button type="button" onclick="updateDNS(this)" <?=$disabled_updatedns?>>_(Update DNS)_</button>
+
+:mgmt_certificate_expiration_help:
+
+</form>

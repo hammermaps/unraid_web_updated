@@ -1,0 +1,59 @@
+#!/usr/bin/php
+<?
+# Usage: newperms [dir] [owner] [group]
+# Recursively changes the ownership and permissions of the directory and all files/subdirs
+# within the directory.
+# If no arguments given, operates on /mnt/cache and /mnt/disk*, setting owner:group to nobody:users
+# default owner is 'nobody', default group is 'users'
+
+# This was created to fix ownership/permissions when upgrading to Unraid version 5.
+
+# With corrections suggested by forum member Stokkes
+
+# Here's a breakdown of chmod "u-x,go-rwx,go+u,ugo+X"
+#  u-x     Clear the 'x' bit in the user permissions (leaves rw as-is)
+#  go-rwx  Clear the 'rwx' bits in both the group and other permissions
+#  go+u    Copy the user permissions to group and other
+#  ugo+X   Set the 'x' bit for directories in user, group, and other
+
+function process($path) {
+	global $argv;
+	
+	$owner = $argv[2] ?: "nobody";
+	$group = $argv[3] ?: "users";
+
+	if ( is_dir($path) ) {
+		echo "processing ".escapeshellarg($path)."\n";
+		echo "... chmod -R u-x,go-rwx,go+u,ugo+X ".escapeshellarg($path)."\n";
+		passthru("chmod -R u-x,go-rwx,go+u,ugo+X ".escapeshellarg($path));
+		echo "... chown -R $owner:$group ".escapeshellarg($path)."\n";
+		passthru("chown -R $owner:$group ".escapeshellarg($path));
+		echo "... sync\n";
+		passthru("sync");
+	}	
+	
+}
+
+$startTime = time();
+
+if ($argv[1])  {
+	$paths=explode("|",$argv[1]);
+	foreach ($paths as $path)
+		process($path);
+} else {
+	$disks = parse_ini_file("/var/local/emhttp/disks.ini",true);
+	foreach ($disks as $disk => $prop) {
+		if ( is_dir("/mnt/$disk") && $prop['status'] !== "DISK_NP_DSBL" && $prop['status'] !== "DISK_NP") {
+			process("/mnt/$disk");
+		}
+	}
+}
+
+$seconds = time() - $startTime;
+$hours = floor($seconds / 3600);
+$mins = floor($seconds / 60 % 60);
+$secs = floor($seconds % 60);
+
+echo "completed, elapsed time: ".sprintf('%02d:%02d:%02d', $hours, $mins, $secs)."\n";
+
+?>

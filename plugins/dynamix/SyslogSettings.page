@@ -1,0 +1,122 @@
+Menu="NetworkServices"
+Title="Syslog Server"
+Icon="icon-eula"
+Tag="file-text-o"
+---
+<?PHP
+/* Copyright 2005-2020, Lime Technology
+ * Copyright 2012-2020, Bergware International.
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License version 2,
+ * as published by the Free Software Foundation.
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ */
+?>
+<?
+$syslog = @(array)parse_ini_file('/boot/config/rsyslog.cfg');
+?>
+<style>
+span.span{display:inline-block;width:224px}
+</style>
+<script>
+function localFolder(local,time) {
+  if (local) $('#local_folder').show(time); else $('#local_folder').hide(time);
+}
+function logOptions(log,time) {
+  if (log) $('#log_options').show(time); else $('#log_options').hide(time);
+}
+
+$(function(){
+  localFolder(document.syslog.local_server.value);
+  logOptions(document.syslog.log_rotation.value);
+});
+</script>
+
+<form markdown="1" name="syslog" method="POST" action="/update.php" target="progressFrame">
+<input type="hidden" name="#file" value="/boot/config/rsyslog.cfg">
+<input type="hidden" name="#command" value="/webGui/scripts/rsyslog_config">
+
+_(Local syslog server)_:
+: <span class="span"><select name="local_server" onchange="localFolder(this.value,'slow')">
+  <?=mk_option($syslog['local_server'], "", _("Disabled"))?>
+  <?=mk_option($syslog['local_server'], "1", _("Enabled"))?>
+  </select></span>
+  <select name="server_protocol" class="narrow">
+  <?=mk_option($syslog['server_protocol'], "udp", _("UDP"))?>
+  <?=mk_option($syslog['server_protocol'], "tcp", _("TCP"))?>
+  <?=mk_option($syslog['server_protocol'], "both", _("Both"))?>
+  </select>
+  <input type="text" name="server_port" class="trim" value="<?=$syslog['server_port']?>" maxlength="5" placeholder="514">
+
+:syslog_local_server_help:
+
+<div markdown="1" id="local_folder" style="display:none">
+_(Local syslog folder)_:
+: <select name="server_folder">
+  <?=mk_option(0,'','&lt;'._('custom').'&gt;','disabled')?>
+  <?foreach ($shares as $share){echo mk_option($syslog['server_folder'], '/mnt/user/'.$share['name'], $share['name']);}?>
+  </select>
+
+:syslog_local_folder_help:
+
+_(Local syslog rotation)_:
+: <select name="log_rotation" onchange="logOptions(this.value,'slow')">
+  <?=mk_option($syslog['log_rotation'], "", _("Disabled"))?>
+  <?=mk_option($syslog['log_rotation'], "1", _("Enabled"))?>
+  </select>
+
+:syslog_local_rotation_help:
+
+<div markdown="1" id="log_options" style="display:none">
+_(Local syslog maximum file size)_:
+: <select name="log_size">
+  <?=mk_option($syslog['log_size'], '1M', '1 '._('MB'))?>
+  <?=mk_option($syslog['log_size'], '2M', '2 '._('MB'))?>
+  <?=mk_option($syslog['log_size'], '5M', '5 '._('MB'))?>
+  <?=mk_option($syslog['log_size'], '10M', '10 '._('MB'))?>
+  <?=mk_option($syslog['log_size'], '20M', '20 '._('MB'))?>
+  <?=mk_option($syslog['log_size'], '50M', '50 '._('MB'))?>
+  <?=mk_option($syslog['log_size'], '100M', '100 '._('MB'))?>
+  <?=mk_option($syslog['log_size'], '200M', '200 '._('MB'))?>
+  <?=mk_option($syslog['log_size'], '500M', '500 '._('MB'))?>
+  </select>
+
+:syslog_local_file_size_help:
+
+_(Local syslog number of files)_:
+: <select name="log_files">
+  <?=mk_option($syslog['log_files'], '1', '1')?>
+  <?=mk_option($syslog['log_files'], '2', '2')?>
+  <?=mk_option($syslog['log_files'], '3', '3')?>
+  <?=mk_option($syslog['log_files'], '4', '4')?>
+  </select>
+
+:syslog_local_file_number_help:
+
+</div>
+</div>
+
+_(Remote syslog server)_:
+: <span class="span"><input type="text" name="remote_server" class="narrow" value="<?=$syslog['remote_server']?>" maxlength="23" placeholder="_(name or ip address)_"></span>
+  <select name="remote_protocol" class="narrow" size="1">
+  <?=mk_option($syslog['remote_protocol'], "udp", _("UDP"))?>
+  <?=mk_option($syslog['remote_protocol'], "tcp", _("TCP"))?>
+  </select>
+  <input type="text" name="remote_port" class="trim" value="<?=$syslog['remote_port']?>" maxlength="4" placeholder="514">
+
+:syslog_remote_server_help:
+
+_(Mirror syslog to flash)_:
+: <select name="syslog_flash" size="1">
+  <?=mk_option($syslog['syslog_flash'], "", _("No"))?>
+  <?=mk_option($syslog['syslog_flash'], "1", _("Yes"))?>
+  </select>
+
+:syslog_mirror_flash_help:
+
+&nbsp;
+: <input type="submit" value="_(Apply)_" disabled><input type="button" value="_(Done)_" onclick="done()">
+</form>

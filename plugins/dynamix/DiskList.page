@@ -1,0 +1,42 @@
+Menu="Shares:2"
+Title="Disk Shares"
+Tag="user-circle-o"
+Cond="$var['fsState']!='Stopped' && $var['shareDisk']!='no'"
+---
+<?PHP
+/* Copyright 2005-2020, Lime Technology
+ * Copyright 2012-2020, Bergware International.
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License version 2,
+ * as published by the Free Software Foundation.
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ */
+?>
+<script>
+function displayDisks(all) {
+  if (all == 'yes') {
+    $.cookie('ssz','ssz',{path:'/'});
+    $('#disk_list').html("<tr><td colspan='8'><div class='spinner'></div></td></tr>");
+    $('div.spinner').html(unraid_logo);
+  }
+  $.get('/webGui/include/DiskList.php',{compute:all,path:'<?=$path?>',scale:'<?=$display['scale']?>',number:'<?=$display['number']?>',fill:$.cookie('ssz')},function(data){
+    $.removeCookie('ssz',{path:'/'})
+    $('#disk_list').html(data);
+    $('#compute-disks').prop('disabled',!data || data.indexOf('colspan=')!=-1);
+  });
+}
+$(function() {
+  displayDisks('no');
+});
+</script>
+
+<table class="share_status share">
+<thead><tr><td style="width:15%">_(Name)_</td><td style="width:30%">_(Comment)_</td><td style="width:8%">_(SMB)_</td><td style="width:8%">_(NFS)_</td><td style="width:14%">_(Type)_</td><td style="width:10%">_(Size)_</td><td style="width:10%">_(Free)_</td><td style="width:5%">_(View)_</td></tr></thead>
+<tbody id="disk_list"></tbody>
+</table>
+<p><input id="compute-disks" type="button" value="_(Compute All)_" onclick="$(this).prop('disabled',true);displayDisks('yes')"></p>
+
+:disk_list_help:
