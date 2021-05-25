@@ -2,10 +2,10 @@
 <project version="4">
   <component name="WebServers">
     <option name="servers">
-      <webServer id="c0261817-807a-4e30-ae9a-9c60d7d5e4c1" name="Unraid" url="http://192.168.178.13/">
-        <fileTransfer rootFolder="/usr/local/emhttp" host="192.168.178.13" port="21">
+      <webServer id="c0261817-807a-4e30-ae9a-9c60d7d5e4c1" name="Unraid" url="http://192.168.178.134">
+        <fileTransfer rootFolder="/usr/local/emhttp" accessType="SFTP" host="192.168.178.134" port="22" sshConfigId="da2d0547-e9b6-4d85-bcb7-901d8be97570" sshConfig="root@192.168.178.134:22 password">
           <advancedOptions>
-            <advancedOptions dataProtectionLevel="Private" passiveMode="true" shareSSLContext="true" />
+            <advancedOptions dataProtectionLevel="Private" keepAliveTimeout="0" passiveMode="true" shareSSLContext="true" />
           </advancedOptions>
         </fileTransfer>
       </webServer>

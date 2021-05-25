@@ -345,6 +345,7 @@ function makeConfig(opts) {
     value.addClass("numbersOnly");
   }
   if (opts.Mask == "true") {
+    value.prop("autocomplete","new-password");
     value.prop("type", "password");
   }
   return newConfig.prop('outerHTML');

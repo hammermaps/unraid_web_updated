@@ -3,8 +3,8 @@ Title="Edit User"
 Tag="user"
 ---
 <?PHP
-/* Copyright 2005-2020, Lime Technology
- * Copyright 2012-2020, Bergware International.
+/* Copyright 2005-2021, Lime Technology
+ * Copyright 2012-2021, Bergware International.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License version 2,
@@ -133,7 +133,7 @@ $(function(){
         swal({title:"_(Too many files)_",text:"_(Please select one file only)_!",html:true,type:"error"});
         break;
       case 'FileTooLarge':
-        swal({title:"_(File too large)_",text:"_(Maximum file upload size is 512K (524,288 bytes))_",type:"error",html:true,confirmButtonText:"_(Ok)_"});
+        swal({title:"_(File too large)_",text:"_(Maximum file upload size is 512K)_ (524,288 _(bytes)_)",type:"error",html:true,confirmButtonText:"_(Ok)_"});
         break;
       }
     },
