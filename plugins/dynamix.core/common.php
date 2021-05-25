@@ -99,4 +99,4 @@ class Common
 
 Common::getInstance(); //init
 
-require_once Common::getInstance()->getDocRoot()."/plugins/dynamix_core/state.php";
+require_once Common::getInstance()->getDocRoot()."/plugins/dynamix.core/state.php";

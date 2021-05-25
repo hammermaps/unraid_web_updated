@@ -9,20 +9,25 @@
  * The above copyright notice and this permission notice shall be included in
  * all copies or substantial portions of the Software.
  */
-?>
-<?
-// Keep $_SESSION to store language selection
-session_start();
 
 // Define root path
 $docroot = $_SERVER['DOCUMENT_ROOT'];
 
-require_once "$docroot/webGui/include/Helpers.php";
+require_once "$docroot/plugins/dynamix.core/common.php";
+require_once Common::getInstance()->getDocRoot()."/webGui/include/Helpers.php";
 
 // Get the webGui configuration preferences
 extract(parse_plugin_cfg('dynamix',true));
 
 // Read emhttp status
+/** @var array $disks */
+/** @var array $var */
+foreach (Common::getInstance()->getState()->getIndex() as $varname => $options) {
+    $$varname = $options;
+    unset($varname,$options);
+}
+
+/*
 $var     = (array)parse_ini_file('state/var.ini');
 $sec     = (array)parse_ini_file('state/sec.ini',true);
 $devs    = (array)parse_ini_file('state/devs.ini',true);
@@ -30,6 +35,7 @@ $disks   = (array)parse_ini_file('state/disks.ini',true);
 $users   = (array)parse_ini_file('state/users.ini',true);
 $shares  = (array)parse_ini_file('state/shares.ini',true);
 $sec_nfs = (array)parse_ini_file('state/sec_nfs.ini',true);
+*/
 
 // Merge SMART settings
 require_once "$docroot/webGui/include/CustomMerge.php";
@@ -69,4 +75,3 @@ $pageroot = $docroot.'/'.dirname($myPage['file']);
 
 // Giddyup
 require_once "$docroot/webGui/include/DefaultPageLayout.php";
-?>

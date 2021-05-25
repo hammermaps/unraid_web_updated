@@ -53,6 +53,7 @@ class State {
      * @return array
      */
     public function getIndex(): array {
+
         return $this->index;
     }
 }
